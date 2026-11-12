@@ -1,0 +1,73 @@
+.abcjs-inline-audio {
+    display: flex;
+    align-items: center;
+    padding: 6px;
+    background-color: #424242;
+    border-radius: 4px;
+    height: 38px;
+    box-sizing: border-box;
+}
+
+.abcjs-inline-audio.abcjs-disabled {
+    opacity: 0.5;
+}
+
+.abcjs-inline-audio .abcjs-btn {
+    display: flex;
+    align-items: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.abcjs-inline-audio .abcjs-btn g {
+    fill: #ffffff;
+}
+
+.abcjs-inline-audio .abcjs-btn:hover g {
+    fill: #aaddff;
+}
+
+.abcjs-midi-out .abcjs-btn g {
+    fill: #ffffff;
+}
+
+.abcjs-audio-progress-background {
+    background-color: #878787;
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    margin: 0 8px;
+    cursor: pointer;
+    position: relative;
+}
+
+.abcjs-audio-progress-bar {
+    background-color: #aaddff;
+    height: 100%;
+    border-radius: 3px;
+    width: 0;
+    pointer-events: none;
+}
+
+.abcjs-audio-clock {
+    color: #ffffff;
+    font-family: monospace;
+    font-size: 12px;
+    min-width: 36px;
+    text-align: center;
+}
+
+.abcjs-tempo-wrapper {
+    display: flex;
+    align-items: center;
+    color: #ffffff;
+    font-size: 11px;
+    margin-left: 6px;
+}
+
+.abcjs-tempo-wrapper input[type="range"] {
+    width: 60px;
+    margin: 0 4px;
+}
