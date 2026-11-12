@@ -25,6 +25,12 @@
         .sb-song-title { font-family:'Inter',sans-serif; font-size:36pt; font-weight:900; text-align:center; border-bottom:2pt solid black; margin-bottom:20pt; padding-bottom:5pt; }
     </style>
     <style id="main-styles">
+        /* The outer page shell owns navigation and the full-width piano frame. */
+        #app-nav, #piano-container { display:none !important; }
+        body { height:100vh !important; width:100vw !important; }
+        #studio-page { min-height:0; }
+        #studio-page > #scroll-container { min-height:0; }
+        #studio-page > .no-print { max-width:none; padding:8px 12px; gap:0; }
         
         body { 
             background: #f8fafc; 
@@ -442,6 +448,7 @@
                 timestamp: Date.now()
             };
             localStorage.setItem(SAVE_KEY, JSON.stringify(draft));
+            window.parent.postMessage({ type: 'infinity:editor-state', project: draft }, location.origin);
         }
 
         function loadFromStorage() {
@@ -958,16 +965,17 @@
             const nav = document.querySelectorAll('#app-nav button');
             const studio = document.getElementById('studio-page');
             const songbook = document.getElementById('songbook-page');
+            if (!studio || !songbook) return;
             if (page === 'studio') {
                 studio.classList.remove('page-hidden');
                 songbook.classList.remove('page-active');
-                nav[0].classList.add('nav-active');
-                nav[1].classList.remove('nav-active');
+                if (nav[0]) nav[0].classList.add('nav-active');
+                if (nav[1]) nav[1].classList.remove('nav-active');
             } else {
                 studio.classList.add('page-hidden');
                 songbook.classList.add('page-active');
-                nav[0].classList.remove('nav-active');
-                nav[1].classList.add('nav-active');
+                if (nav[0]) nav[0].classList.remove('nav-active');
+                if (nav[1]) nav[1].classList.add('nav-active');
             }
         }
 
@@ -1103,8 +1111,14 @@
             generateKeyboard(); 
             checkExpiryAndLoad(); 
             if(lineCount === 0) createLine(); 
+            saveToStorage();
             setInterval(saveToStorage, 10000); 
         };
+
+        window.addEventListener('message', (event) => {
+            if (event.origin !== location.origin || event.data?.type !== 'infinity:piano-note') return;
+            addNote(event.data.note);
+        });
     </script>
 </body>
 </html>

@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Infinity Harmony Studio</title>
+    <script src="libs/abcjs-basic-min.js"></script>
+    <link rel="stylesheet" href="libs/abcjs-audio.css">
+    <script src="libs/tailwind.min.js"></script>
+    <link rel="stylesheet" href="libs/inter-font.css">
+    <style>
+        #app-nav { display:flex; align-items:center; gap:0; background:#0f172a; padding:0 16px; height:44px; flex-shrink:0; z-index:100; }
+        #app-nav button { color:#94a3b8; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; padding:0 16px; height:100%; border:none; border-bottom:3px solid transparent; background:none; cursor:pointer; transition:color .15s; }
+        #app-nav button.nav-active { color:#fff; border-bottom-color:#3b82f6; }
+        #app-nav button:hover:not(.nav-active) { color:#e2e8f0; }
+        .nav-logo { color:#fff; font-size:13px; font-weight:900; letter-spacing:.08em; margin-right:12px; }
+        #studio-page { display:flex; flex-direction:column; flex:1; overflow:hidden; }
+        #studio-page.page-hidden { display:none !important; }
+        #songbook-page { display:none; flex:1; overflow-y:auto; background:#f1f5f9; }
+        #songbook-page.page-active { display:block; }
+        #sb-loader { display:none; position:fixed; inset:0; background:rgba(15,23,42,0.92); backdrop-filter:blur(8px); z-index:9999; flex-direction:column; align-items:center; justify-content:center; color:white; }
+        #sb-loader.active { display:flex; }
+        @keyframes sb-spin { to { transform:rotate(360deg); } }
+        .sb-spinner { width:56px; height:56px; border:4px solid #3b82f6; border-top-color:transparent; border-radius:50%; animation:sb-spin .8s linear infinite; margin-bottom:24px; }
+        .sb-song-title { font-family:'Inter',sans-serif; font-size:36pt; font-weight:900; text-align:center; border-bottom:2pt solid black; margin-bottom:20pt; padding-bottom:5pt; }
+    </style>
+    <style id="main-styles">
+        
+        body { 
+            background: #f8fafc; 
+            font-family: 'Inter', sans-serif; 
+            color: #1e293b; 
+            height: 100vh; 
+            width: 100vw; 
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Dark Mode Classes */
+        body.dark-mode { background: #0f172a; color: #f1f5f9; }
+        .dark-mode .bg-white { background-color: #1e293b !important; color: #f1f5f9; }
+        .dark-mode .bg-slate-50 { background-color: #0f172a !important; }
+        .dark-mode .bg-slate-100 { background-color: #334155 !important; }
+        .dark-mode .border-slate-200 { border-color: #334155 !important; }
+        .dark-mode .text-slate-400 { color: #94a3b8 !important; }
+        .dark-mode .text-slate-600 { color: #cbd5e1 !important; }
+        .dark-mode .line-paper { background: #1e293b; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.3); }
+        .dark-mode .abcjs-note { fill: #f1f5f9 !important; }
+        .dark-mode .abcjs-staff { stroke: #94a3b8 !important; }
+        .dark-mode .abcjs-beam { fill: #f1f5f9 !important; }
+        .dark-mode .abcjs-lyrics { fill: #cbd5e1 !important; }
+        .dark-mode input, .dark-mode select, .dark-mode textarea { background-color: #334155 !important; color: #f1f5f9 !important; border-color: #475569 !important; }
+        .dark-mode .key-white { background: #e2e8f0; border-color: #94a3b8; color: #1e293b; }
+
+        .line-paper { 
+            background: white; 
+            border-radius: 0.75rem; 
+            padding: 1.5rem; 
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05); 
+            min-height: 140px; 
+            transition: height 0.2s; 
+        }
+        
+        .abcjs-audio-container { background: transparent !important; border: none !important; padding: 0 !important; width: 100%; }
+        .abcjs-btn { fill: #ffffff !important; width: 28px; height: 28px; cursor: pointer; padding: 4px; transition: opacity 0.2s; }
+        .abcjs-btn:hover { opacity: 0.8; }
+        .abcjs-audio-progress-background { background-color: #334155 !important; height: 6px; border-radius: 3px; flex: 1; margin: 0 10px; cursor: pointer; position: relative; }
+        .abcjs-audio-progress-bar { background-color: #3b82f6 !important; height: 100%; border-radius: 3px; width: 0; }
+        .abcjs-audio-clock { color: #94a3b8 !important; font-family: monospace; font-size: 12px; min-width: 40px; text-align: center; }
+        
+        .horizontal-scroll { overflow-x: auto; white-space: nowrap; display: flex; scrollbar-width: none; }
+        .horizontal-scroll::-webkit-scrollbar { display: none; }
+
+        .piano-scroll { 
+            overflow-x: auto; 
+            white-space: nowrap; 
+            display: flex; 
+            padding: 10px 0 20px 0; 
+            scrollbar-width: thin; 
+            scrollbar-color: #cbd5e1 transparent; 
+            -webkit-overflow-scrolling: touch; 
+        }
+        .piano-scroll::-webkit-scrollbar { height: 6px; }
+        .piano-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        .key-white { background: white; border: 1px solid #cbd5e1; height: 130px; min-width: 50px; border-radius: 0 0 6px 6px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; transition: background 0.1s; position: relative; z-index: 1; cursor: pointer; user-select: none; }
+        .key-white:active { background: #f1f5f9; transform: translateY(2px); }
+        .key-white.middle-c { border-bottom: 4px solid #3b82f6; color: #3b82f6; }
+
+        .key-black { background: #1e293b; height: 85px; min-width: 34px; margin-left: -17px; margin-right: -17px; z-index: 10; border-radius: 0 0 4px 4px; transition: background 0.1s; cursor: pointer; user-select: none; border: 1px solid #000; }
+        .key-black:active { background: #000; transform: translateY(2px); }
+
+        .dur-btn.active { background-color: #3b82f6 !important; color: white !important; border-color: #2563eb !important; }
+        .dot-btn.active { background-color: #8b5cf6 !important; color: white !important; border-color: #7c3aed !important; }
+        .record-btn.active { background-color: #ef4444 !important; color: white !important; border-color: #dc2626 !important; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        
+        .voice-input:focus, .lyrics-textarea:focus { border-color: #3b82f6; background: white; box-shadow: 0 0 0 1px #3b82f6; }
+        .voice-input[readonly] { cursor: default; }
+
+        /* Drag and Drop Styles */
+        .drag-handle { cursor: grab; background: repeating-linear-gradient(90deg, #cbd5e1, #cbd5e1 2px, transparent 2px, transparent 4px); height: 12px; width: 40px; margin: 0 auto 8px auto; border-radius: 2px; }
+        .drag-handle:active { cursor: grabbing; }
+        .section-card.dragging { opacity: 0.5; border: 2px dashed #3b82f6; }
+
+        @media print {
+            @page { margin: 1cm; }
+            body { background: white !important; display: block !important; height: auto !important; width: auto !important; overflow: visible !important; }
+            .no-print { display: none !important; }
+            .section-card { break-inside: avoid; border: none !important; box-shadow: none !important; padding: 0 !important; margin-bottom: 2rem !important; }
+            .line-paper { padding: 0 !important; }
+        }
+    </style>
+</head>
+<body ondragover="handleGlobalDragOver(event)">
+
+    <nav id="app-nav">
+    <span class="nav-logo">∞ INFINITY</span>
+    <button class="nav-active" onclick="switchPage('studio')">Studio</button>
+    <button onclick="switchPage('songbook')">Songbook</button>
+</nav>
+
+<div id="studio-page">
+<div id="scroll-container" class="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 w-full">
+        <div class="max-w-5xl mx-auto space-y-6 pb-12" id="printable-area">
+            
+            <div class="bg-white p-6 rounded-3xl shadow-xl border border-slate-200" id="main-header">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="space-y-4">
+                        <input type="text" id="songTitle" placeholder="Song Title" class="w-full text-3xl font-black border-b-2 border-slate-100 focus:border-blue-500 outline-none p-2 bg-transparent">
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="text" id="lyricWriter" placeholder="Lyrics By" class="bg-slate-50 border-b border-slate-200 p-2 text-sm outline-none rounded-t">
+                            <input type="text" id="musicWriter" placeholder="Music By" class="bg-slate-50 border-b border-slate-200 p-2 text-sm outline-none rounded-t">
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col gap-4 no-print">
+                        <div class="bg-slate-900 rounded-2xl p-4 min-h-[70px] flex items-center shadow-inner relative overflow-hidden">
+                            <div id="audio-controls" class="w-full">
+                                <div class="text-slate-400 text-xs italic text-center">Tap "Sync & Play" to prepare audio</div>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <div class="bg-slate-50 p-2 rounded-xl border border-slate-100 flex items-center gap-2">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase ml-1">Voices:</span>
+                                <select id="harmonyParts" onchange="updateAllLines()" class="text-xs font-bold bg-white border border-slate-200 rounded p-1 outline-none">
+                                    <option value="1">Solo</option>
+                                    <option value="2">Duet</option>
+                                    <option value="3">Trio</option>
+                                    <option value="4" selected>SATB (4)</option>
+                                </select>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded-xl border border-slate-100 flex items-center gap-2">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase ml-1">Time:</span>
+                                <select id="timeSig" onchange="updateAllLines()" class="text-xs font-bold bg-white border border-slate-200 rounded p-1 outline-none">
+                                    <option value="4/4">4/4</option>
+                                    <option value="3/4">3/4</option>
+                                    <option value="2/4">2/4</option>
+                                    <option value="6/8">6/8</option>
+                                </select>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded-xl border border-slate-100 flex items-center gap-2">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase ml-1">BPM:</span>
+                                <input type="number" id="tempoBpm" value="120" min="40" max="300" class="w-12 text-xs font-bold bg-white border border-slate-200 rounded p-1 outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4 no-print">
+                    <div class="flex flex-wrap items-center gap-6">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="keyboardToggle" class="sr-only peer" checked onchange="toggleInputMode()">
+                            <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            <span class="ml-3 text-sm font-medium text-slate-600">Piano Input</span>
+                        </label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="multiVoiceLyrics" class="sr-only peer" onchange="updateAllLines()">
+                            <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                            <span class="ml-3 text-sm font-medium text-slate-600">Indiv. Voice Lyrics</span>
+                        </label>
+                        <button onclick="toggleDarkMode()" class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">
+                            <svg id="dark-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                            <span id="dark-text">Dark Mode</span>
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <button onclick="downloadBackup()" class="text-[10px] font-black uppercase bg-white px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 shadow-sm transition-all">Save Project</button>
+                        <button onclick="document.getElementById('uploadInput').click()" class="text-[10px] font-black uppercase bg-white px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 shadow-sm transition-all">Load Project</button>
+                        <input type="file" id="uploadInput" class="hidden" accept=".txt,.json" onchange="uploadBackup(event)">
+                        <button onclick="generatePrintWindow()" class="text-[10px] font-black uppercase bg-slate-800 text-white px-4 py-1.5 rounded-lg hover:bg-black shadow-sm transition-all">Export PDF</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="editor-container" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- BOTTOM CONTROL PANEL -->
+    <div class="shrink-0 w-full bg-white border-t-2 border-slate-200 shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.1)] z-50 no-print">
+        <div class="max-w-6xl mx-auto p-4 flex flex-col gap-4">
+            
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl overflow-hidden">
+                    <span class="text-[10px] font-black uppercase text-slate-400 px-2 shrink-0">Duration:</span>
+                    <div class="horizontal-scroll gap-2 pr-2">
+                        <button onclick="setDuration(4, this)" class="dur-btn px-4 py-2 rounded-lg font-bold text-xs bg-white shadow-sm border border-slate-200 shrink-0">Whole</button>
+                        <button onclick="setDuration(2, this)" class="dur-btn px-4 py-2 rounded-lg font-bold text-xs bg-white shadow-sm border border-slate-200 shrink-0">Half</button>
+                        <button onclick="setDuration(1, this)" class="dur-btn active px-4 py-2 rounded-lg font-bold text-xs bg-white shadow-sm border border-slate-200 shrink-0">1/4</button>
+                        <button onclick="setDuration(0.5, this)" class="dur-btn px-4 py-2 rounded-lg font-bold text-xs bg-white shadow-sm border border-slate-200 shrink-0">1/8</button>
+                        <button onclick="setDuration(0.25, this)" class="dur-btn px-4 py-2 rounded-lg font-bold text-xs bg-white shadow-sm border border-slate-200 shrink-0">1/16</button>
+                        <div class="h-8 w-px bg-slate-300 mx-1 shrink-0"></div>
+                        <button id="dot-toggle" onclick="toggleDot(this)" class="dot-btn px-4 py-2 rounded-lg font-bold text-xs bg-white shadow-sm border border-slate-200 shrink-0">Dot (.)</button>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 horizontal-scroll pb-1">
+                    <button onclick="handleBackspace()" class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-lg font-black text-xs uppercase shrink-0">⌫ Delete</button>
+                    <button onclick="addSpecial('z')" class="bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded-lg font-black text-xs uppercase shrink-0">Rest</button>
+                    <button onclick="addSpecial('slur_start')" class="bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded-lg font-black text-xs uppercase shrink-0">(</button>
+                    <button onclick="addSpecial('slur_end')" class="bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded-lg font-black text-xs uppercase shrink-0">)</button>
+                    <div class="h-6 w-px bg-slate-300 mx-1 shrink-0"></div>
+                    <button onclick="createLine()" class="bg-blue-600 text-white px-5 py-2 rounded-lg font-bold text-xs shadow-lg shrink-0 hover:bg-blue-700">+ Add Measures</button>
+                    <button onclick="toggleRecording(this)" id="recordBtn" class="bg-slate-800 text-white px-5 py-2 rounded-lg font-bold text-xs shadow-lg shrink-0 hover:bg-black flex items-center gap-2"><span class="w-2 h-2 bg-red-500 rounded-full"></span> Sing with Piano</button>
+                    <button onclick="playSong()" id="syncBtn" class="bg-emerald-600 text-white px-5 py-2 rounded-lg font-bold text-xs shadow-lg shrink-0 hover:bg-emerald-700">▶ Sync & Play</button>
+                </div>
+            </div>
+
+            <div class="piano-scroll scrollbar-hide" id="piano-container"></div>
+        </div>
+    </div>
+
+</div><!-- end #studio-page -->
+
+<!-- SONGBOOK LOADER -->
+<div id="sb-loader">
+    <div class="sb-spinner"></div>
+    <p class="font-bold text-3xl mb-2">Generating Songbook...</p>
+    <p id="sb-loader-status" class="text-slate-400 text-center px-8 text-lg">Drawing notation...</p>
+</div>
+
+<!-- SONGBOOK PAGE -->
+<div id="songbook-page">
+    <div style="max-width:800px; margin:0 auto; padding:40px 20px;">
+        <header class="text-center mb-12">
+            <h1 class="text-5xl font-black text-slate-900 tracking-tight mb-2">Infinity Songbook</h1>
+            <p class="text-slate-500 font-medium text-xl">Music Library Viewer</p>
+        </header>
+        <div class="bg-white rounded-3xl p-10 border-2 border-dashed border-slate-300 hover:border-blue-500 transition-all text-center mb-10 shadow-sm">
+            <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <h3 class="text-2xl font-bold text-slate-800 mb-2">Import Project Files</h3>
+            <div class="flex flex-wrap justify-center gap-4 pt-4">
+                <button onclick="sbTrigger('files')" class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold hover:bg-black transition-all shadow-lg">Add Files</button>
+                <button onclick="sbTrigger('folder')" class="bg-white border-2 border-slate-200 text-slate-700 px-10 py-4 rounded-2xl font-bold hover:bg-slate-50 transition-all">Add Folder</button>
+            </div>
+            <input type="file" id="sb-fileInput" multiple accept=".json,.txt,.abc" class="hidden" onchange="sbHandleFiles(this.files)">
+            <input type="file" id="sb-folderInput" webkitdirectory directory class="hidden" onchange="sbHandleFiles(this.files)">
+        </div>
+        <div id="sb-library-section" class="hidden space-y-6">
+            <div class="flex items-center justify-between border-b-2 border-slate-200 pb-6">
+                <h2 class="text-2xl font-black text-slate-800">Library (<span id="sb-song-count">0</span>)</h2>
+                <button onclick="sbGeneratePrint()" class="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition-all">Print Songbook PDF</button>
+            </div>
+            <div id="sb-song-list" class="grid grid-cols-1 gap-3"></div>
+        </div>
+    </div>
+</div>
+
+    <script>
+        let lineCount = 0;
+        let selectedDuration = 1; 
+        let isDotted = false;
+        let lastFocusedInput = null;
+        let synthControl;
+        let audioCtx;
+        let isDarkMode = false;
+        let draggedElement = null;
+        let isRecording = false;
+        let lastKeyPressTime = 0;
+
+
+        const SAVE_KEY = "harmony_studio_draft_v6_drag";
+        const LAST_ACTIVITY_KEY = "harmony_studio_last_activity";
+        const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+        // --- Drag and Drop Logic ---
+        function setupDragEvents(el) {
+            el.addEventListener('dragstart', (e) => {
+                if (!e.target.classList.contains('drag-handle')) {
+                    e.preventDefault();
+                    return;
+                }
+                draggedElement = el;
+                setTimeout(() => el.classList.add('dragging'), 0);
+            });
+
+            el.addEventListener('dragend', () => {
+                el.classList.remove('dragging');
+                draggedElement = null;
+                renderAllPreviews();
+                saveToStorage();
+            });
+        }
+
+        function handleGlobalDragOver(e) {
+            e.preventDefault();
+            const container = document.getElementById('editor-container');
+            const afterElement = getDragAfterElement(container, e.clientY);
+            if (draggedElement) {
+                if (afterElement == null) {
+                    container.appendChild(draggedElement);
+                } else {
+                    container.insertBefore(draggedElement, afterElement);
+                }
+            }
+        }
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.section-card:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // --- Rhythm Logic for Automatic Bars ---
+        function getTimeSigBeats() {
+            const sig = document.getElementById('timeSig').value || "4/4";
+            const parts = sig.split('/');
+            const num = parseInt(parts[0]);
+            const den = parseInt(parts[1]);
+            // Convert to beats (where 1/4 note = 1 beat)
+            return num * (4 / den);
+        }
+
+        function parseDuration(token) {
+            if (!token) return 0;
+            // Remove pitch info to get duration part
+            const durPart = token.replace(/^[\^_]?[A-Ga-gz,']+/, '');
+            if (!durPart) return 1; // Default is 1/4 note = 1 beat
+            if (durPart === '4') return 4;
+            if (durPart === '2') return 2;
+            if (durPart === '/2') return 0.5;
+            if (durPart === '/4') return 0.25;
+            if (durPart === '6') return 6;
+            if (durPart === '3') return 3;
+            if (durPart === '3/2') return 1.5;
+            if (durPart === '3/4') return 0.75;
+            if (durPart === '3/8') return 0.375;
+            
+            // Fallback for custom fractions like /8 or 2/3 etc
+            try {
+                if (durPart.includes('/')) {
+                    const [n, d] = durPart.split('/').map(x => x === '' ? 1 : parseFloat(x));
+                    return n / d;
+                }
+                return parseFloat(durPart) || 1;
+            } catch(e) { return 1; }
+        }
+
+        function applyAutoBarLines(allVoicesData) {
+            const beatsPerMeasure = getTimeSigBeats();
+            const partsCount = parseInt(document.getElementById('harmonyParts').value);
+            
+            // Track accumulated beats for each voice across all sections
+            let voiceAccumulators = Array(partsCount).fill(0);
+            
+            return allVoicesData.map(section => {
+                let processedVoices = [];
+                for (let v = 0; v < partsCount; v++) {
+                    const rawText = section[v] || "";
+                    const tokens = rawText.split(/\s+/).filter(t => t.length > 0);
+                    let resultTokens = [];
+                    
+                    tokens.forEach(token => {
+                        // Skip manual bar lines so we can re-calculate
+                        if (token === '|') return;
+                        
+                        const dur = parseDuration(token);
+                        voiceAccumulators[v] += dur;
+                        resultTokens.push(token);
+                        
+                        // If we hit or exceed the measure boundary
+                        // We use a small epsilon for float precision
+                        if (voiceAccumulators[v] >= beatsPerMeasure - 0.001) {
+                            resultTokens.push('|');
+                            voiceAccumulators[v] -= beatsPerMeasure;
+                            // Reset just in case of slight precision drift
+                            if (voiceAccumulators[v] < 0.01) voiceAccumulators[v] = 0;
+                        }
+                    });
+                    processedVoices.push(resultTokens.join(' '));
+                }
+                return processedVoices;
+            });
+        }
+
+        // --- Core Application Logic ---
+        function checkExpiryAndLoad() {
+            const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
+            const now = Date.now();
+            if (lastActivity && (now - parseInt(lastActivity) > THIRTY_DAYS_MS)) {
+                localStorage.removeItem(SAVE_KEY);
+            } else {
+                loadFromStorage();
+            }
+            localStorage.setItem(LAST_ACTIVITY_KEY, now.toString());
+        }
+
+        function saveToStorage() {
+            const container = document.getElementById('editor-container');
+            if (!container) return;
+            const musicData = [];
+            container.querySelectorAll('.section-card').forEach(sec => {
+                let voices = [];
+                sec.querySelectorAll('.voice-input').forEach(inp => voices.push(inp.value));
+                let lyrics = [];
+                sec.querySelectorAll('.lyrics-textarea').forEach(tx => lyrics.push(tx.value));
+                musicData.push({ voices, lyrics });
+            });
+            const draft = {
+                title: document.getElementById('songTitle').value,
+                lyricsBy: document.getElementById('lyricWriter').value,
+                musicBy: document.getElementById('musicWriter').value,
+                voices: document.getElementById('harmonyParts').value,
+                multiVoiceLyrics: document.getElementById('multiVoiceLyrics').checked,
+                timeSignature: document.getElementById('timeSig').value,
+                bpm: document.getElementById('tempoBpm').value,
+                music: musicData,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(SAVE_KEY, JSON.stringify(draft));
+        }
+
+        function loadFromStorage() {
+            const saved = localStorage.getItem(SAVE_KEY);
+            if (!saved) return;
+            try {
+                const data = JSON.parse(saved);
+                applyProjectData(data);
+            } catch(e) { console.error("Auto-load failed", e); }
+        }
+
+        function applyProjectData(data) {
+            document.getElementById('songTitle').value = data.title || "";
+            document.getElementById('lyricWriter').value = data.lyricsBy || "";
+            document.getElementById('musicWriter').value = data.musicBy || "";
+            document.getElementById('harmonyParts').value = data.voices || "4";
+            document.getElementById('multiVoiceLyrics').checked = !!data.multiVoiceLyrics;
+            document.getElementById('timeSig').value = data.timeSignature || "4/4";
+            document.getElementById('tempoBpm').value = data.bpm || "120";
+            
+            const container = document.getElementById('editor-container');
+            container.innerHTML = '';
+            lineCount = 0;
+            if (data.music && Array.isArray(data.music)) {
+                data.music.forEach(mObj => {
+                    createLine();
+                    const inputs = container.lastElementChild.querySelectorAll('.voice-input');
+                    const lyricTxs = container.lastElementChild.querySelectorAll('.lyrics-textarea');
+                    const voices = mObj.voices || [];
+                    const lyrics = Array.isArray(mObj.lyrics) ? mObj.lyrics : [mObj.lyrics || ""];
+                    voices.forEach((val, idx) => { if(inputs[idx]) inputs[idx].value = val; });
+                    lyrics.forEach((val, idx) => { if(lyricTxs[idx]) lyricTxs[idx].value = val; });
+                });
+                renderAllPreviews();
+            }
+        }
+
+        function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode', isDarkMode);
+            const icon = document.getElementById('dark-icon');
+            const text = document.getElementById('dark-text');
+            if (isDarkMode) {
+                icon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+                text.innerText = "Light Mode";
+            } else {
+                icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+                text.innerText = "Dark Mode";
+            }
+            renderAllPreviews();
+        }
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playEditTone(abc) {
+            if (!abc || abc === 'z') return;
+            initAudio();
+        
+            const getMidiNote = (a) => {
+                const map = { 'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11 };
+                // Extract the base letter (C, d, etc.)
+                let baseLetter = a.replace(/[\^,_']/g, '');
+                let note = map[baseLetter.toUpperCase()];
+                
+                // Determine octave base
+                // ABC notation: C is middle, c is octave up, C, is octave down
+                let octave = (baseLetter === baseLetter.toUpperCase()) ? 4 : 5;
+                
+                // Adjust for commas (down) and apostrophes (up)
+                const downs = (a.match(/,/g) || []).length;
+                const ups = (a.match(/'/g) || []).length;
+                octave = octave - downs + ups;
+        
+                // Combine for MIDI number (Middle C/C4 = 60)
+                let midi = (octave + 1) * 12 + note;
+        
+                // Apply accidentals
+                if (a.includes('^')) midi += 1;
+                if (a.includes('_')) midi -= 1;
+                
+                return midi;
+            };
+        
+            const midiNote = getMidiNote(abc);
+            const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
+        
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            // Using 'triangle' for a softer, more piano-like tone than 'sine'
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.4);
+        }
+
+        function generateKeyboard() {
+            const container = document.getElementById('piano-container');
+            container.innerHTML = '';
+            const scale = ["C", "D", "E", "F", "G", "A", "B"];
+            
+            // Defined range from C,, (Very Low) to c'' (Very High)
+            const octs = [
+                { s: ',,', labelOff: -28 }, 
+                { s: ',', labelOff: -14 }, 
+                { s: '', labelOff: 0 },    // UPPER CASE: Middle Octave
+                { s: 'lower', labelOff: 7 }, // lower case: Octave +1
+                { s: "'", labelOff: 14 }, 
+                { s: "''", labelOff: 21 }
+            ];
+        
+            octs.forEach((oct) => {
+                scale.forEach((noteName, sIdx) => {
+                    const labelValue = oct.labelOff + sIdx;
+                    let abc = "";
+            
+                    // Construct correct ABC string for the octave
+                    if (oct.s === 'lower') abc = noteName.toLowerCase();
+                    else if (oct.s === "'") abc = noteName.toLowerCase() + "'";
+                    else if (oct.s === "''") abc = noteName.toLowerCase() + "''";
+                    else abc = noteName + oct.s;
+        
+                    const wKey = document.createElement('button');
+                    wKey.className = `key-white ${labelValue === 0 ? 'middle-c' : ''}`;
+                    wKey.innerHTML = `<div class="flex flex-col items-center justify-end h-full pb-1 pointer-events-none gap-1">
+                                        <span class="text-xs font-bold text-slate-800">${labelValue}</span>
+                                        <span class="text-[9px] text-slate-400 font-bold">${noteName}</span>
+                                      </div>`;
+                    wKey.onclick = () => addNote(abc);
+                    container.appendChild(wKey);
+        
+                    if (noteName !== "E" && noteName !== "B") {
+                        const bKey = document.createElement('button');
+                        bKey.className = 'key-black';
+                        bKey.onclick = () => addNote("^" + abc);
+                        container.appendChild(bKey);
+                    }
+                });
+            });
+            setTimeout(() => document.querySelector('.middle-c')?.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'center' }), 100);
+        }
+
+        function setDuration(val, btn) {
+            selectedDuration = val;
+            document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        
+        function toggleRecording(btn) {
+            isRecording = !isRecording;
+            if (isRecording) {
+                btn.classList.add('active');
+                btn.innerHTML = '<span class="w-2 h-2 bg-white rounded-full"></span> Recording...';
+                lastKeyPressTime = performance.now();
+                initAudio();
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = '<span class="w-2 h-2 bg-red-500 rounded-full"></span> Sing with Piano';
+                lastKeyPressTime = 0;
+            }
+        }
+
+        function getClosestABCLength(durationInBeats) {
+            const lengths = [
+                { val: 4, str: "4" },
+                { val: 6, str: "6" },
+                { val: 2, str: "2" },
+                { val: 3, str: "3" },
+                { val: 1, str: "" },
+                { val: 1.5, str: "3/2" },
+                { val: 0.5, str: "/2" },
+                { val: 0.75, str: "3/4" },
+                { val: 0.25, str: "/4" },
+                { val: 0.375, str: "3/8" }
+            ];
+            let closest = lengths[0];
+            let minDiff = Math.abs(durationInBeats - closest.val);
+            for (let i = 1; i < lengths.length; i++) {
+                let diff = Math.abs(durationInBeats - lengths[i].val);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closest = lengths[i];
+                }
+            }
+            return closest.str;
+        }
+
+        function toggleDot(btn) {
+            isDotted = !isDotted;
+            btn.classList.toggle('active', isDotted);
+        }
+
+        
+        function addNote(abc) {
+            if (!lastFocusedInput || lastFocusedInput.classList.contains('lyrics-textarea')) return;
+            playEditTone(abc);
+            
+            let durStr = "";
+            if (isRecording && lastKeyPressTime > 0) {
+                const now = performance.now();
+                const bpm = parseFloat(document.getElementById('tempoBpm').value) || 120;
+                const msPerBeat = 60000 / bpm;
+                const durationInBeats = (now - lastKeyPressTime) / msPerBeat;
+                
+                durStr = getClosestABCLength(durationInBeats);
+                lastKeyPressTime = now;
+            } else {
+                if (selectedDuration === 4) durStr = "4";
+                else if (selectedDuration === 2) durStr = "2";
+                else if (selectedDuration === 1) durStr = "";
+                else if (selectedDuration === 0.5) durStr = "/2";
+                else if (selectedDuration === 0.25) durStr = "/4";
+                if (isDotted) {
+                    if (selectedDuration === 4) durStr = "6";
+                    else if (selectedDuration === 2) durStr = "3";
+                    else if (selectedDuration === 1) durStr = "3/2";
+                    else if (selectedDuration === 0.5) durStr = "3/4";
+                    else if (selectedDuration === 0.25) durStr = "3/8";
+                }
+                if (isRecording) lastKeyPressTime = performance.now();
+            }
+            
+            const currentVal = lastFocusedInput.value.trim();
+            lastFocusedInput.value = (currentVal + " " + abc + durStr).trim();
+            lastFocusedInput.dispatchEvent(new Event('input'));
+        }
+
+        function handleBackspace() {
+            if (!lastFocusedInput) return;
+            const tokens = lastFocusedInput.value.trim().split(/\s+/);
+            tokens.pop();
+            lastFocusedInput.value = tokens.join(" ");
+            lastFocusedInput.dispatchEvent(new Event('input'));
+        }
+
+        function addSpecial(type) {
+            if (!lastFocusedInput || lastFocusedInput.classList.contains('lyrics-textarea')) return;
+            let token = "";
+            if (type === 'z') { addNote('z'); return; }
+            else if (type === 'slur_start') token = "(";
+            else if (type === 'slur_end') token = ")";
+            lastFocusedInput.value = (lastFocusedInput.value.trim() + " " + token).trim();
+            lastFocusedInput.dispatchEvent(new Event('input'));
+        }
+
+        function toggleInputMode() {
+            const isVirtual = document.getElementById('keyboardToggle').checked;
+            document.querySelectorAll('.voice-input').forEach(input => isVirtual ? input.setAttribute('readOnly', 'true') : input.removeAttribute('readOnly'));
+        }
+
+        function createLine() {
+            lineCount++;
+            const id = lineCount;
+            const div = document.createElement('div');
+            div.className = "section-card bg-white p-6 pt-2 rounded-2xl shadow-lg border border-slate-200 relative group transition-all";
+            div.id = `line-wrapper-${id}`;
+            div.draggable = true;
+            setupDragEvents(div);
+            
+            const numParts = parseInt(document.getElementById('harmonyParts').value);
+            const multiLyric = document.getElementById('multiVoiceLyrics').checked;
+            const partNames = ['Soprano', 'Alto', 'Tenor', 'Bass'];
+            const colors = ['border-blue-400', 'border-amber-400', 'border-emerald-400', 'border-rose-400'];
+            
+            let inputsHtml = `<div class="grid gap-4 mb-4 md:grid-cols-2">`;
+            for(let i=0; i<numParts; i++) {
+                inputsHtml += `<div class="flex flex-col">
+                    <label class="text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">${partNames[i]}</label>
+                    <input type="text" data-voice="v${i+1}" onfocus="lastFocusedInput = this" class="voice-input w-full p-3 bg-slate-50 border-l-4 ${colors[i]} outline-none rounded-r-xl font-mono text-sm transition-colors" placeholder="Notes...">
+                    ${multiLyric ? `<textarea data-lyric="l${i+1}" onfocus="lastFocusedInput = this" class="lyrics-textarea w-full mt-2 p-2 bg-blue-50/20 border border-blue-100 rounded-xl text-[11px] outline-none" placeholder="${partNames[i]} lyrics..."></textarea>` : ''}
+                </div>`;
+            }
+            inputsHtml += `</div>`;
+            
+            if (!multiLyric) {
+                inputsHtml += `<div class="mb-4"><label class="text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Lyrics (Aligns to Soprano)</label><textarea data-lyric="l1" onfocus="lastFocusedInput = this" class="lyrics-textarea w-full p-3 bg-blue-50/50 border border-blue-100 outline-none rounded-xl text-sm" placeholder="Hap-py birth-day..."></textarea></div>`;
+            }
+
+            div.innerHTML = `
+                <div class="drag-handle no-print"></div>
+                <div id="paper-${id}" class="line-paper mb-4"></div>
+                ${inputsHtml}
+                <button onclick="this.parentElement.remove(); renderAllPreviews(); saveToStorage();" class="no-print absolute top-3 right-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity font-bold px-2 py-1">✕</button>
+            `;
+            
+            document.getElementById('editor-container').appendChild(div);
+            div.querySelectorAll('input, textarea').forEach(el => el.addEventListener('input', () => { renderAllPreviews(); saveToStorage(); }));
+            toggleInputMode();
+            renderAllPreviews();
+        }
+
+        function renderAllPreviews() {
+            const time = document.getElementById('timeSig').value;
+            const bpm = document.getElementById('tempoBpm').value;
+            const partsCount = parseInt(document.getElementById('harmonyParts').value);
+            const multiLyric = document.getElementById('multiVoiceLyrics').checked;
+
+            // Gather all raw data in the current visual order
+            const sections = Array.from(document.querySelectorAll('.section-card'));
+            const rawData = sections.map(sec => {
+                let v = [];
+                for(let i=1; i<=partsCount; i++) v.push(sec.querySelector(`[data-voice="v${i}"]`)?.value || "");
+                return v;
+            });
+
+            // Process data to inject automatic bar lines across boundaries
+            const processedData = applyAutoBarLines(rawData);
+
+            // Render each section with its processed ABC
+            sections.forEach((sec, idx) => {
+                const id = sec.id.split('-').pop();
+                let score = '';
+                if (partsCount === 4) score = '%%score (1 2) (3 4)';
+                else if (partsCount === 3) score = '%%score (1 2) 3';
+                else if (partsCount === 2) score = '%%score (1 2)';
+                
+                let abc = `X:${id}\nM:${time}\nL:1/4\nQ:1/4=${bpm}\nK:C\n${score}\n`;
+                for(let i=1; i<=partsCount; i++) {
+                    const notesVal = processedData[idx][i-1] || "z4";
+                    abc += `V:${i} clef=${i <= 2 ? 'treble' : 'bass'}\n${notesVal}\n`;
+                    
+                    const lyricBox = sec.querySelector(`[data-lyric="l${i}"]`);
+                    if (lyricBox) {
+                        const lines = lyricBox.value.split('\n');
+                        lines.forEach(line => { if (line.trim()) abc += `w: ${line.trim()}\n`; });
+                    }
+                }
+                if(abc && typeof ABCJS !== 'undefined') ABCJS.renderAbc(`paper-${id}`, abc, { responsive: "resize" });
+            });
+        }
+
+        async function playSong() {
+            initAudio(); 
+            const btn = document.getElementById('syncBtn');
+            btn.innerText = "⌛ Syncing..."; btn.disabled = true;
+            
+            const time = document.getElementById('timeSig').value;
+            const bpm = document.getElementById('tempoBpm').value;
+            const partsCount = parseInt(document.getElementById('harmonyParts').value);
+            
+            // Re-fetch visual data for full play
+            const sections = Array.from(document.querySelectorAll('.section-card'));
+            const rawData = sections.map(sec => {
+                let v = [];
+                for(let i=1; i<=partsCount; i++) v.push(sec.querySelector(`[data-voice="v${i}"]`)?.value || "");
+                return v;
+            });
+            const processedData = applyAutoBarLines(rawData);
+
+            let fullAbc = `X:1\nT:${document.getElementById('songTitle').value || 'My Song'}\nM:${time}\nL:1/4\nQ:1/4=${bpm}\nK:C\n`;
+            if (partsCount > 1) fullAbc += `%%score ${partsCount === 4 ? '(1 2) (3 4)' : partsCount === 3 ? '(1 2) 3' : '(1 2)'}\n`;
+            
+            for(let i=1; i<=partsCount; i++) {
+                fullAbc += `V:${i} clef=${i <= 2 ? 'treble' : 'bass'}\n`;
+                processedData.forEach(pVoice => {
+                    fullAbc += (pVoice[i-1] || "z4") + " ";
+                });
+                fullAbc += "]\n";
+            }
+
+            try {
+                if (typeof ABCJS !== 'undefined' && ABCJS.synth.supportsAudio()) {
+                    const visualObj = ABCJS.renderAbc(document.createElement('div'), fullAbc)[0];
+                    const controlsDiv = document.getElementById('audio-controls');
+                    controlsDiv.innerHTML = "";
+                    synthControl = new ABCJS.synth.SynthController();
+                    await synthControl.load("#audio-controls", null, { displayPlay: true, displayProgress: true, displayTempo: false, displayWarp: false });
+                    await synthControl.setTune(visualObj, false, { audioContext: audioCtx, millisecondsPerMeasure: visualObj.millisecondsPerMeasure() });
+                }
+                btn.innerText = "▶ Sync & Play"; btn.disabled = false;
+            } catch (e) { btn.innerText = "Error"; btn.disabled = false; setTimeout(() => { btn.innerText = "▶ Sync & Play"; }, 3000); }
+        }
+
+
+        function downloadBackup() {
+            saveToStorage();
+            const saved = localStorage.getItem(SAVE_KEY);
+            if (!saved) return;
+            
+            const data = JSON.parse(saved);
+            const title = data.title || "My_Song";
+            const blob = new Blob([saved], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${title.replace(/\s+/g, '_')}_backup.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function uploadBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                try {
+                    // Check if the file is the old JSON format
+                    if (content.trim().startsWith('{')) {
+                        const data = JSON.parse(content);
+                        applyProjectData(data);
+                        saveToStorage();
+                    } 
+                    // Otherwise, treat it as an ABCJS format
+                    else {
+                        // Clear existing lines to prepare for import
+                        const container = document.getElementById('editor-container');
+                        container.innerHTML = '';
+                        lineCount = 0;
+                        createLine();
+
+                        // Parse ABC Header Info
+                        const titleMatch = content.match(/^T:(.*)$/m);
+                        const lyricMatch = content.match(/^w:(.*)$/m);
+                        const musicMatch = content.match(/^C:(.*)$/m);
+                        const timeMatch = content.match(/^M:(.*)$/m);
+                        const bpmMatch = content.match(/^Q:.*=(.*)$/m);
+
+                        if (titleMatch) document.getElementById('songTitle').value = titleMatch[1].trim();
+                        if (lyricMatch) document.getElementById('lyricWriter').value = lyricMatch[1].trim();
+                        if (musicMatch) document.getElementById('musicWriter').value = musicMatch[1].trim();
+                        if (timeMatch) document.getElementById('timeSig').value = timeMatch[1].trim();
+                        if (bpmMatch) document.getElementById('tempoBpm').value = bpmMatch[1].trim();
+
+                        // Parse Voice and Lyric Data
+                        const voiceBlocks = content.split(/^V:/m).slice(1);
+                        voiceBlocks.forEach((block, idx) => {
+                            const lines = block.split('\n');
+                            const voiceIndex = idx + 1;
+                            let noteData = "";
+                            let lyricData = "";
+                            
+                            lines.forEach((line, lIdx) => {
+                                if (lIdx === 0) return; // Skip the voice header line
+                                if (line.startsWith('w:')) {
+                                    lyricData += line.substring(2).trim() + " ";
+                                } else if (line.trim() && !line.startsWith('%') && !line.startsWith('V:')) {
+                                    noteData += line.trim() + " ";
+                                }
+                            });
+
+                            const vInput = container.querySelector(`[data-voice="v${voiceIndex}"]`);
+                            const lInput = container.querySelector(`[data-lyric="l${voiceIndex}"]`);
+                            if (vInput) vInput.value = noteData.trim();
+                            if (lInput) lInput.value = lyricData.trim();
+                        });
+
+                        renderAllPreviews();
+                        saveToStorage();
+                    }
+                } catch (err) {
+                    alert("Invalid file format. Could not load project.");
+                    console.error("Upload error:", err);
+                }
+            };
+            reader.readAsText(file);
+        }        function generatePrintWindow() {
+            const title = document.getElementById('songTitle').value || 'My Composition';
+            const lyricist = document.getElementById('lyricWriter').value;
+            const composer = document.getElementById('musicWriter').value;
+            const time = document.getElementById('timeSig').value;
+            const bpm = document.getElementById('tempoBpm').value;
+            const partsCount = parseInt(document.getElementById('harmonyParts').value);
+            
+            const sections = Array.from(document.querySelectorAll('.section-card'));
+            const rawData = sections.map(sec => {
+                let v = [];
+                for(let i=1; i<=partsCount; i++) v.push(sec.querySelector(`[data-voice="v${i}"]`)?.value || "");
+                return v;
+            });
+            const processedData = applyAutoBarLines(rawData);
+            
+            const allABC = sections.map((sec, idx) => {
+                const id = sec.id.split('-').pop();
+                let score = '';
+                if (partsCount === 4) score = '%%score (1 2) (3 4)';
+                else if (partsCount === 3) score = '%%score (1 2) 3';
+                else if (partsCount === 2) score = '%%score (1 2)';
+                
+                let abc = `X:${id}\nM:${time}\nL:1/4\nQ:1/4=${bpm}\nK:C\n${score}\n`;
+                for(let i=1; i<=partsCount; i++) {
+                    const notesVal = processedData[idx][i-1] || "z4";
+                    abc += `V:${i} clef=${i <= 2 ? 'treble' : 'bass'}\n${notesVal}\n`;
+                    const lyricBox = sec.querySelector(`[data-lyric="l${i}"]`);
+                    if (lyricBox) {
+                        const lines = lyricBox.value.split('\n');
+                        lines.forEach(line => { if (line.trim()) abc += `w: ${line.trim()}\n`; });
+                    }
+                }
+                return abc;
+            });
+
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) return;
+            printWindow.document.write(`<html><head><title>${title}</title><script src="libs/abcjs-basic-min.js"><\/script><script src="libs/tailwind.min.js"><\/script><link rel="stylesheet" href="libs/inter-font.css"><style>body { font-family: 'Inter', sans-serif; padding: 50px; }.abc-container { margin-bottom: 40px; page-break-inside: avoid; }.header { text-align: center; margin-bottom: 50px; border-bottom: 2px solid black; padding-bottom: 20px; }</style></head><body><div class="header"><h1 class="text-4xl font-black uppercase">${title}</h1><div class="flex justify-between mt-4 font-bold text-sm"><span>${lyricist ? 'Lyrics: '+lyricist : ''}</span><span>${composer ? 'Music: '+composer : ''}</span></div></div><div id="print-content"></div><script>const data = ${JSON.stringify(allABC)};window.onload = function() { const container = document.getElementById('print-content'); data.forEach((abc, i) => { const div = document.createElement('div'); div.id = 'p-' + i; div.className = 'abc-container'; container.appendChild(div); if(typeof ABCJS !== 'undefined') ABCJS.renderAbc(div.id, abc, { responsive: \"resize\" }); }); setTimeout(() => window.print(), 1000); }<\/script></body></html>`);
+            printWindow.document.close();
+        }
+
+        // ── Page Switching ──
+        function switchPage(page) {
+            const nav = document.querySelectorAll('#app-nav button');
+            const studio = document.getElementById('studio-page');
+            const songbook = document.getElementById('songbook-page');
+            if (page === 'studio') {
+                studio.classList.remove('page-hidden');
+                songbook.classList.remove('page-active');
+                nav[0].classList.add('nav-active');
+                nav[1].classList.remove('nav-active');
+            } else {
+                studio.classList.add('page-hidden');
+                songbook.classList.add('page-active');
+                nav[0].classList.remove('nav-active');
+                nav[1].classList.add('nav-active');
+            }
+        }
+
+        // ── Songbook Logic ──
+        let sbLibrary = [];
+
+        function sbTrigger(mode) {
+            document.getElementById(mode === 'files' ? 'sb-fileInput' : 'sb-folderInput').click();
+        }
+
+        async function sbHandleFiles(files) {
+            for (let file of files) {
+                const text = await file.text();
+                const trimmed = text.trim();
+                try {
+                    if (trimmed.startsWith('{')) {
+                        const data = JSON.parse(text);
+                        if (data.title) { data._format = 'json'; sbLibrary.push(data); }
+                    } else if (trimmed.includes('X:') && trimmed.includes('K:')) {
+                        const tM = text.match(/^T:(.*)$/m);
+                        const mM = text.match(/^C:(.*)$/m);
+                        const vM = text.match(/^V:/mg);
+                        sbLibrary.push({ title: tM ? tM[1].trim() : file.name, musicBy: mM ? mM[1].trim() : '', voices: vM ? vM.length : 1, abcRaw: text, _format: 'abc' });
+                    }
+                } catch(e) { console.error('SB load error:', file.name, e); }
+            }
+            sbUpdateUI();
+        }
+
+        function sbUpdateUI() {
+            const list = document.getElementById('sb-song-list');
+            list.innerHTML = '';
+            sbLibrary.forEach((song) => {
+                const item = document.createElement('div');
+                item.className = "bg-white p-5 rounded-2xl border border-slate-200 flex justify-between items-center";
+                item.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="font-bold text-slate-700">${song.title}</span>
+                        <span class="text-xs text-slate-400 italic">${song.musicBy || 'Unknown Composer'}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded font-bold uppercase">${song._format}</span>
+                        <span class="text-xs font-black bg-slate-100 px-3 py-1 rounded-full uppercase text-slate-500">${song.voices}-Voice</span>
+                    </div>`;
+                list.appendChild(item);
+            });
+            document.getElementById('sb-song-count').innerText = sbLibrary.length;
+            document.getElementById('sb-library-section').classList.toggle('hidden', sbLibrary.length === 0);
+        }
+
+        async function sbGeneratePrint() {
+            const loader = document.getElementById('sb-loader');
+            const status = document.getElementById('sb-loader-status');
+            loader.classList.add('active');
+            status.innerText = 'Drawing notation...';
+
+            const printWindow = window.open('', '_blank', 'width=1100,height=850');
+            const styleBlock = `<style>
+                @page { size: A4; margin: 0; }
+                body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background: #ddd; }
+                #content { zoom: 0.87; }
+                .page { background: white; width: 210mm; min-height: 297mm; padding: 2cm; margin: 0 auto; box-sizing: border-box; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.1); page-break-after: always; }
+                .sb-song-title { font-family: 'Inter', sans-serif; font-size: 36pt; font-weight: 900; text-align: center; border-bottom: 2pt solid black; margin-bottom: 20pt; padding-bottom: 5pt; }
+                .credits { display: flex; justify-content: space-between; font-weight: 800; font-size: 10pt; margin-bottom: 25pt; text-transform: uppercase; }
+                .footer-label { position: absolute; bottom: 1cm; right: 1.5cm; font-size: 11pt; font-weight: 800; letter-spacing: 1pt; }
+                .index-item { display: flex; justify-content: space-between; border-bottom: 2px dotted #ccc; padding: 12pt 0; font-size: 20pt; font-weight: 800; }
+                @media print { body { background: white; } .page { margin: 0; box-shadow: none; width: 100%; } }
+            </style>`;
+
+            printWindow.document.write(`<html><head><title>Infinity Songbook</title>${styleBlock}</head><body><div id="content"></div></body></html>`);
+            const container = printWindow.document.getElementById('content');
+
+            // Index page
+            const idxPage = printWindow.document.createElement('div');
+            idxPage.className = 'page';
+            idxPage.innerHTML = `<h1 style="text-align:center;font-size:55pt;margin-top:80pt;margin-bottom:40pt;font-weight:900;letter-spacing:6pt;font-family:Inter,sans-serif;">INDEX</h1><div>` +
+                sbLibrary.map((s, i) => `<div class="index-item"><span>${s.title}</span><span style="color:#64748b">SONG ${i+1}</span></div>`).join('') + `</div>`;
+            container.appendChild(idxPage);
+
+            for (let i = 0; i < sbLibrary.length; i++) {
+                const song = sbLibrary[i];
+                status.innerText = `Rendering ${i+1} of ${sbLibrary.length}: ${song.title}`;
+                const songPage = printWindow.document.createElement('div');
+                songPage.className = 'page';
+                const abcDivId = `abc-${i}`;
+                songPage.innerHTML = `
+                    <div class="sb-song-title">${song.title}</div>
+                    <div class="credits">
+                        <span>Lyrics: ${song.lyricsBy || song.lyricWriter || '---'}</span>
+                        <span>Music: ${song.musicBy || song.musicWriter || '---'}</span>
+                    </div>
+                    <div id="${abcDivId}"></div>
+                    <div class="footer-label">SONG ${i+1}</div>`;
+                container.appendChild(songPage);
+
+                let finalAbc = '';
+                if (song._format === 'abc') {
+                    finalAbc = song.abcRaw;
+                } else {
+                    const time = song.timeSignature || '4/4';
+                    const bpm = song.bpm || '120';
+                    const partsCount = parseInt(song.voices) || 1;
+                    let scoreHeader = '';
+                    if (partsCount === 4) scoreHeader = '%%score (1 2) (3 4)';
+                    else if (partsCount === 3) scoreHeader = '%%score (1 2) 3';
+                    else if (partsCount === 2) scoreHeader = '%%score (1 2)';
+                    finalAbc = `X:1\nM:${time}\nL:1/4\nQ:1/4=${bpm}\nK:C\n${scoreHeader}\n`;
+                    if (song.music) {
+                        song.music.forEach((section) => {
+                            const voices = section.voices || [];
+                            const lyrics = section.lyrics || [];
+                            for (let v = 0; v < partsCount; v++) {
+                                finalAbc += `V:${v+1} clef=${v < 2 ? 'treble' : 'bass'}\n${voices[v] || 'z4'}\n`;
+                                const lyricLine = Array.isArray(lyrics) ? lyrics[v] : (v === 0 ? lyrics : '');
+                                if (lyricLine && lyricLine.trim()) finalAbc += `w: ${lyricLine.trim()}\n`;
+                            }
+                        });
+                    }
+                }
+                if (typeof ABCJS !== 'undefined') {
+                    ABCJS.renderAbc(printWindow.document.getElementById(abcDivId), finalAbc, { responsive: 'resize', scale: 1.1 });
+                }
+            }
+
+            status.innerText = 'Finalizing...';
+            setTimeout(() => {
+                loader.classList.remove('active');
+                printWindow.print();
+            }, 1500);
+        }
+
+        window.onload = () => { 
+            generateKeyboard(); 
+            checkExpiryAndLoad(); 
+            if(lineCount === 0) createLine(); 
+            setInterval(saveToStorage, 10000); 
+        };
+    </script>
+</body>
+</html>

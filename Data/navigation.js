@@ -1,0 +1,1 @@
+document.querySelectorAll('.nav').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.nav').forEach(item=>item.classList.toggle('active',item===button));parent.postMessage({type:'infinity:navigate',page:button.dataset.page},location.origin)}));
