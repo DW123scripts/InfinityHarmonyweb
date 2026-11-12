@@ -27,6 +27,7 @@
     <style id="main-styles">
         /* The outer page shell owns navigation and the full-width piano frame. */
         #app-nav, #piano-container { display:none !important; }
+        #editor-control-panel { display:none !important; }
         body { height:100vh !important; width:100vw !important; }
         #studio-page { min-height:0; }
         #studio-page > #scroll-container { min-height:0; }
@@ -209,7 +210,7 @@
     </div>
 
     <!-- BOTTOM CONTROL PANEL -->
-    <div class="shrink-0 w-full bg-white border-t-2 border-slate-200 shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.1)] z-50 no-print">
+    <div id="editor-control-panel" class="shrink-0 w-full bg-white border-t-2 border-slate-200 shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.1)] z-50 no-print">
         <div class="max-w-6xl mx-auto p-4 flex flex-col gap-4">
             
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -758,6 +759,26 @@
         function toggleInputMode() {
             const isVirtual = document.getElementById('keyboardToggle').checked;
             document.querySelectorAll('.voice-input').forEach(input => isVirtual ? input.setAttribute('readOnly', 'true') : input.removeAttribute('readOnly'));
+        }
+
+        function setInputMode(mode) {
+            const numericMode = mode === 'numbers' || mode === 'piano';
+            document.getElementById('keyboardToggle').checked = numericMode;
+            toggleInputMode();
+        }
+
+        function handleToolbarAction(action, value) {
+            if (action === 'duration') {
+                selectedDuration = Number(value) || 1;
+                return;
+            }
+            if (action === 'dot') { isDotted = !isDotted; return; }
+            if (action === 'delete') { handleBackspace(); return; }
+            if (action === 'rest') { addSpecial('z'); return; }
+            if (action === 'slur_start' || action === 'slur_end') { addSpecial(action); return; }
+            if (action === 'measure') { createLine(); return; }
+            if (action === 'record') { toggleRecording(document.getElementById('recordBtn')); return; }
+            if (action === 'play') { playSong(); }
         }
 
         function createLine() {
