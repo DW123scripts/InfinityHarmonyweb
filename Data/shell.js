@@ -30,15 +30,13 @@ function handlePianoKeyboard(event,source){
     const editorDoc=editor.contentDocument;
     const voiceInput=editor.contentWindow.lastFocusedInput;
     if(!voiceInput||!voiceInput.isConnected||!voiceInput.classList.contains('voice-input'))return;
-    if(event.code==='Backspace'&&source==='piano') {event.preventDefault();editor.contentWindow.handleBackspace?.();return}
+    if(event.code==='Backspace') {event.preventDefault();editor.contentWindow.handleBackspace?.();return}
     if(!editorDoc.querySelector('#keyboardToggle')?.checked)return;
-    if(source==='editor'&&editorDoc.activeElement!==voiceInput)return;
     if(event.code==='Space'){
         keyboardSharpHeld=true;
         event.preventDefault();
         return;
     }
-    if(event.code==='Backspace'&&source==='editor'&&editorDoc.activeElement===voiceInput){event.preventDefault();editor.contentWindow.handleBackspace?.();return}
     if(event.repeat)return;
     const codeMatch=event.code.match(/^(?:Digit|Numpad)([0-9])$/);
     if(!codeMatch)return;
@@ -48,20 +46,19 @@ function handlePianoKeyboard(event,source){
     event.preventDefault();
     editor.contentWindow.addNote(abcNoteForKeyboardStep(pressedIndex-zeroIndex,keyboardSharpHeld));
 }
-let editorKeyboardInstalled=false,pianoKeyboardInstalled=false;
-function installKeyboardListeners(frame,source){
-    const isEditor=source==='editor';
-    if((isEditor&&editorKeyboardInstalled)||(!isEditor&&pianoKeyboardInstalled))return;
+const keyboardListenersInstalled=new WeakSet();
+function installKeyboardListeners(frame,source='frame'){
+    if(keyboardListenersInstalled.has(frame))return;
     const frameDocument=frame.contentDocument;
     if(!frameDocument)return;
     frameDocument.addEventListener('keydown',event=>handlePianoKeyboard(event,source));
     frameDocument.addEventListener('keyup',event=>handlePianoKeyboard(event,source));
-    if(isEditor)editorKeyboardInstalled=true;else pianoKeyboardInstalled=true;
+    keyboardListenersInstalled.add(frame);
 }
-editor.addEventListener('load',()=>installKeyboardListeners(editor,'editor'));
-piano.addEventListener('load',()=>installKeyboardListeners(piano,'piano'));
-if(editor.contentDocument?.readyState==='complete')installKeyboardListeners(editor,'editor');
-if(piano.contentDocument?.readyState==='complete')installKeyboardListeners(piano,'piano');
+const keyboardFrames=[editor,piano,document.querySelector('#controls-frame'),document.querySelector('#navigation'),preview,settingsFrame];
+for(const frame of keyboardFrames){frame.addEventListener('load',()=>installKeyboardListeners(frame));if(frame.contentDocument?.readyState==='complete')installKeyboardListeners(frame)}
+window.addEventListener('keydown',event=>handlePianoKeyboard(event,'shell'));
+window.addEventListener('keyup',event=>handlePianoKeyboard(event,'shell'));
 window.addEventListener('blur',()=>{keyboardSharpHeld=false});
 function resizeWorkspace(event){
     if(!dragging)return;
