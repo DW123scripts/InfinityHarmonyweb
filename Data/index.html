@@ -287,6 +287,7 @@
         let lastFocusedInput = null;
         let synthControl;
         let audioCtx;
+        let pianoSoundfontPreloadPromise = null;
         let isDarkMode = false;
         let draggedElement = null;
         let isRecording = false;
@@ -505,9 +506,25 @@
         function initAudio() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (typeof ABCJS !== 'undefined' && ABCJS.synth?.registerAudioContext) ABCJS.synth.registerAudioContext(audioCtx);
         }
 
-        function playEditTone(abc) {
+        function preloadPianoSoundfont() {
+            if (pianoSoundfontPreloadPromise) return pianoSoundfontPreloadPromise;
+            if (!audioCtx || typeof ABCJS === 'undefined' || !ABCJS.synth?.CreateSynth || !ABCJS.synth.supportsAudio()) return;
+            const sequence = new ABCJS.synth.SynthSequence();
+            const track = sequence.addTrack();
+            sequence.setInstrument(track, 0);
+            // Warm the full pitch range supplied by ABCJS's default soundfont.
+            for (let pitch = 27; pitch <= 87; pitch++) sequence.appendNote(track, pitch, 1 / 64, 80);
+            const preloader = new ABCJS.synth.CreateSynth();
+            pianoSoundfontPreloadPromise = preloader.init({ sequence, millisecondsPerMeasure: 1000, audioContext: audioCtx }).catch((error) => {
+                console.warn('Piano soundfont preload failed:', error);
+            });
+            return pianoSoundfontPreloadPromise;
+        }
+
+        function playEditTone(abc, durationInBeats = selectedDuration * (isDotted ? 1.5 : 1)) {
             if (!abc || abc === 'z') return;
             initAudio();
         
@@ -537,6 +554,30 @@
             };
         
             const midiNote = getMidiNote(abc);
+            if (!Number.isFinite(midiNote)) return;
+
+            if (typeof ABCJS !== 'undefined' && ABCJS.synth?.playEvent && ABCJS.synth.supportsAudio()) {
+                const beatsPerMeasure = getTimeSigBeats();
+                const bpm = parseFloat(document.getElementById('tempoBpm').value) || 120;
+                const millisecondsPerMeasure = (60000 / bpm) * beatsPerMeasure;
+                const durationInMeasures = Math.max(0.01, durationInBeats / beatsPerMeasure);
+                ABCJS.synth.registerAudioContext(audioCtx);
+                try {
+                    ABCJS.synth.playEvent([{
+                        pitch: midiNote,
+                        duration: durationInMeasures,
+                        volume: 80,
+                        instrument: 0
+                    }], [], millisecondsPerMeasure).catch((error) => {
+                        console.warn('ABCJS note preview failed:', error);
+                    });
+                    return;
+                } catch (error) {
+                    console.warn('ABCJS note preview failed:', error);
+                }
+            }
+
+            // Compatibility fallback for a browser without the ABCJS synth API.
             const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
         
             const osc = audioCtx.createOscillator();
@@ -656,14 +697,14 @@
         
         function addNote(abc) {
             if (!lastFocusedInput || lastFocusedInput.classList.contains('lyrics-textarea')) return;
-            playEditTone(abc);
-            
+            let noteDurationInBeats = selectedDuration * (isDotted ? 1.5 : 1);
             let durStr = "";
             if (isRecording && lastKeyPressTime > 0) {
                 const now = performance.now();
                 const bpm = parseFloat(document.getElementById('tempoBpm').value) || 120;
                 const msPerBeat = 60000 / bpm;
                 const durationInBeats = (now - lastKeyPressTime) / msPerBeat;
+                noteDurationInBeats = durationInBeats;
                 
                 durStr = getClosestABCLength(durationInBeats);
                 lastKeyPressTime = now;
@@ -682,11 +723,19 @@
                 }
                 if (isRecording) lastKeyPressTime = performance.now();
             }
+
+            playEditTone(abc, noteDurationInBeats);
             
             const currentVal = lastFocusedInput.value.trim();
             lastFocusedInput.value = (currentVal + " " + abc + durStr).trim();
             lastFocusedInput.dispatchEvent(new Event('input'));
         }
+
+        document.addEventListener('focusin', (event) => {
+            if (!event.target.classList?.contains('voice-input')) return;
+            initAudio();
+            preloadPianoSoundfont();
+        });
 
         function handleBackspace() {
             if (!lastFocusedInput) return;
