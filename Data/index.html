@@ -76,7 +76,8 @@
         .abcjs-audio-progress-bar { background-color: #3b82f6 !important; height: 100%; border-radius: 3px; width: 0; }
         .abcjs-audio-clock { color: #94a3b8 !important; font-family: monospace; font-size: 12px; min-width: 40px; text-align: center; }
         
-        .horizontal-scroll { overflow-x: auto; white-space: nowrap; display: flex; scrollbar-width: none; }
+        .horizontal-scroll { overflow-x: auto; overflow-y: hidden; white-space: nowrap; display: flex; min-width: 0; max-width: 100%; scrollbar-width: none; overscroll-behavior-x: contain; cursor: grab; }
+        .horizontal-scroll:active { cursor: grabbing; }
         .horizontal-scroll::-webkit-scrollbar { display: none; }
 
         .piano-scroll { 
@@ -1112,6 +1113,15 @@
             checkExpiryAndLoad(); 
             if(lineCount === 0) createLine(); 
             saveToStorage();
+            document.querySelectorAll('.horizontal-scroll').forEach((bar) => {
+                bar.addEventListener('wheel', (event) => {
+                    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+                    if (delta && bar.scrollWidth > bar.clientWidth) {
+                        event.preventDefault();
+                        bar.scrollLeft += delta;
+                    }
+                }, { passive: false });
+            });
             setInterval(saveToStorage, 10000); 
         };
 
