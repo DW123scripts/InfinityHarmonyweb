@@ -22,23 +22,22 @@ function abcNoteForKeyboardStep(step,sharp){
 }
 function handlePianoKeyboard(event,source){
     if(event.type==='keyup'){
-        if(event.code==='Space')keyboardSharpHeld=false;
+        if(event.code==='Space'||event.key===' ')keyboardSharpHeld=false;
         return;
     }
     const settings=readSettings();
-    if(!['numbers','piano'].includes(settings.mode)||event.ctrlKey||event.metaKey||event.altKey)return;
-    const editorDoc=editor.contentDocument;
+    const keyboardMode=settings.mode?['numbers','piano'].includes(settings.mode):settings.keyboardPiano===true;
+    if(!keyboardMode||event.ctrlKey||event.metaKey||event.altKey)return;
     const voiceInput=editor.contentWindow.getLastFocusedInput?.();
     if(!voiceInput||!voiceInput.isConnected||!voiceInput.classList.contains('voice-input'))return;
-    if(event.code==='Backspace') {event.preventDefault();editor.contentWindow.handleBackspace?.();return}
-    if(!editorDoc.querySelector('#keyboardToggle')?.checked)return;
-    if(event.code==='Space'){
+    if(event.code==='Backspace'||event.key==='Backspace') {event.preventDefault();editor.contentWindow.handleBackspace?.();return}
+    if(event.code==='Space'||event.key===' '){
         keyboardSharpHeld=true;
         event.preventDefault();
         return;
     }
     if(event.repeat)return;
-    const codeMatch=event.code.match(/^(?:Digit|Numpad)([0-9])$/);
+    const codeMatch=event.code.match(/^(?:Digit|Numpad)([0-9])$/)||(event.key.match(/^[0-9]$/)?[null,event.key]:null);
     if(!codeMatch)return;
     const pressedIndex=numericKeyOrder.indexOf(codeMatch[1]);
     const zeroIndex=numericKeyOrder.indexOf(settings.keyboardZeroKey);
@@ -51,14 +50,14 @@ function installKeyboardListeners(frame,source='frame'){
     if(keyboardListenersInstalled.has(frame))return;
     const frameDocument=frame.contentDocument;
     if(!frameDocument)return;
-    frameDocument.addEventListener('keydown',event=>handlePianoKeyboard(event,source));
-    frameDocument.addEventListener('keyup',event=>handlePianoKeyboard(event,source));
+    frameDocument.addEventListener('keydown',event=>handlePianoKeyboard(event,source),true);
+    frameDocument.addEventListener('keyup',event=>handlePianoKeyboard(event,source),true);
     keyboardListenersInstalled.add(frame);
 }
 const keyboardFrames=[editor,piano,document.querySelector('#controls-frame'),document.querySelector('#navigation'),preview,settingsFrame];
 for(const frame of keyboardFrames){frame.addEventListener('load',()=>installKeyboardListeners(frame));if(frame.contentDocument?.readyState==='complete')installKeyboardListeners(frame)}
-window.addEventListener('keydown',event=>handlePianoKeyboard(event,'shell'));
-window.addEventListener('keyup',event=>handlePianoKeyboard(event,'shell'));
+window.addEventListener('keydown',event=>handlePianoKeyboard(event,'shell'),true);
+window.addEventListener('keyup',event=>handlePianoKeyboard(event,'shell'),true);
 window.addEventListener('blur',()=>{keyboardSharpHeld=false});
 function resizeWorkspace(event){
     if(!dragging)return;
