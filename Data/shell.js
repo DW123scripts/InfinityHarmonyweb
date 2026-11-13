@@ -28,7 +28,7 @@ function handlePianoKeyboard(event,source){
     const settings=readSettings();
     if(!['numbers','piano'].includes(settings.mode)||event.ctrlKey||event.metaKey||event.altKey)return;
     const editorDoc=editor.contentDocument;
-    const voiceInput=editor.contentWindow.lastFocusedInput;
+    const voiceInput=editor.contentWindow.getLastFocusedInput?.();
     if(!voiceInput||!voiceInput.isConnected||!voiceInput.classList.contains('voice-input'))return;
     if(event.code==='Backspace') {event.preventDefault();editor.contentWindow.handleBackspace?.();return}
     if(!editorDoc.querySelector('#keyboardToggle')?.checked)return;

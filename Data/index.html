@@ -286,6 +286,7 @@
         let selectedDuration = 1; 
         let isDotted = false;
         let lastFocusedInput = null;
+        window.getLastFocusedInput = () => lastFocusedInput;
         let synthControl;
         let audioCtx;
         let pianoSoundfontPreloadPromise = null;
