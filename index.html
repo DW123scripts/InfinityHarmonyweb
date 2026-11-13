@@ -15,6 +15,7 @@
     .workspace-frame { border:1px solid var(--line); border-radius:12px; background:#fff; min-width:0; min-height:0; width:100%; height:100%; }
     #editor-frame { display:block; }
     #settings-frame { display:none; }
+    #help-frame { display:none; }
     #preview-frame { display:block; }
     #workspace-divider { position:relative; z-index:2; cursor:col-resize; touch-action:none; }
     #workspace-divider::after { content:""; position:absolute; top:0; bottom:0; left:3px; width:4px; border-radius:4px; background:#cbd5e1; transition:background .15s; }
@@ -29,6 +30,8 @@
     body.no-preview #workspace-divider, body.no-preview #restore-preview { display:none; }
     body.settings-mode #editor-frame, body.settings-mode #preview-frame { display:none; }
     body.settings-mode #settings-frame { display:block; grid-column:1 / -1; }
+    body.help-mode #editor-frame, body.help-mode #preview-frame, body.help-mode #settings-frame { display:none; }
+    body.help-mode #help-frame { display:block; grid-column:1 / -1; }
     body.settings-mode #workspace-divider, body.settings-mode #restore-preview { display:none; }
     body.no-piano { grid-template-rows:54px minmax(0,1fr) 98px 0px; }
     @media (max-width:850px) {
@@ -53,6 +56,7 @@
     <div id="workspace-divider" role="separator" aria-label="Resize editor and score preview" aria-orientation="vertical" tabindex="0"></div>
     <iframe id="preview-frame" class="workspace-frame" title="Live score preview" src="./Data/preview.html"></iframe>
     <iframe id="settings-frame" class="workspace-frame" title="Settings" src="./Data/settings.html"></iframe>
+    <iframe id="help-frame" class="workspace-frame" title="Help" src="./Data/help.html"></iframe>
   </main>
   <button id="restore-preview" type="button" aria-label="Show score preview" title="Show score preview">Show score</button>
   <iframe id="controls-frame" title="Music controls" src="./Data/controls.html"></iframe>

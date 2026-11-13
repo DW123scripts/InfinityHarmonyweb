@@ -739,6 +739,34 @@
             preloadPianoSoundfont();
         });
 
+        function pairedInput(input, selector, fallback) {
+            const key = selector === 'lyric' ? input.dataset.voice?.replace(/^v/, 'l') : input.dataset.lyric?.replace(/^l/, 'v');
+            const section = input.closest('.section-card');
+            return section?.querySelector(`[data-${selector}="${key || fallback}"]`) || section?.querySelector(`[data-${selector}="${fallback}"]`);
+        }
+        document.addEventListener('keydown', (event) => {
+            const active = document.activeElement;
+            const isVoice = active?.classList?.contains('voice-input');
+            const isLyrics = active?.classList?.contains('lyrics-textarea');
+            if (!isVoice && !isLyrics) return;
+            if (event.key.toLowerCase() === 't' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                const lyrics = isVoice ? pairedInput(active, 'lyric', 'l1') : null;
+                if (lyrics) { event.preventDefault(); lyrics.focus(); }
+                return;
+            }
+            if (event.key !== 'Tab') return;
+            event.preventDefault();
+            if (isLyrics) {
+                pairedInput(active, 'voice', 'v1')?.focus();
+                return;
+            }
+            const voices = [...document.querySelectorAll('.voice-input')];
+            const current = voices.indexOf(active);
+            if (current < 0 || !voices.length) return;
+            const step = event.shiftKey ? -1 : 1;
+            voices[(current + step + voices.length) % voices.length].focus();
+        }, true);
+
         function handleBackspace() {
             if (!lastFocusedInput) return;
             const tokens = lastFocusedInput.value.trim().split(/\s+/);
