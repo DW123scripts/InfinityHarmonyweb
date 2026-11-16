@@ -54,7 +54,7 @@ function installKeyboardListeners(frame,source='frame'){
     frameDocument.addEventListener('keyup',event=>handlePianoKeyboard(event,source),true);
     keyboardListenersInstalled.add(frame);
 }
-const keyboardFrames=[editor,piano,document.querySelector('#controls-frame'),document.querySelector('#navigation'),preview,settingsFrame,helpFrame];
+const keyboardFrames=[piano,document.querySelector('#controls-frame'),document.querySelector('#navigation'),preview,settingsFrame,helpFrame];
 for(const frame of keyboardFrames){frame.addEventListener('load',()=>installKeyboardListeners(frame));if(frame.contentDocument?.readyState==='complete')installKeyboardListeners(frame)}
 window.addEventListener('keydown',event=>handlePianoKeyboard(event,'shell'),true);
 window.addEventListener('keyup',event=>handlePianoKeyboard(event,'shell'),true);

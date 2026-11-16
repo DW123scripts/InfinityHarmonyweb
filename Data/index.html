@@ -744,10 +744,37 @@
             const section = input.closest('.section-card');
             return section?.querySelector(`[data-${selector}="${key || fallback}"]`) || section?.querySelector(`[data-${selector}="${fallback}"]`);
         }
+        let editorSharpHeld = false;
         document.addEventListener('keydown', (event) => {
             const active = document.activeElement;
             const isVoice = active?.classList?.contains('voice-input');
             const isLyrics = active?.classList?.contains('lyrics-textarea');
+            if (isVoice && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                let keyboardSettings = {};
+                try { keyboardSettings = JSON.parse(localStorage.getItem('infinity_harmony_settings_v1') || '{}'); } catch {}
+                const useNumbers = ['numbers', 'piano'].includes(keyboardSettings.mode) || (!keyboardSettings.mode && keyboardSettings.keyboardPiano !== false);
+                if (useNumbers) {
+                    if (event.key === 'Backspace') { event.preventDefault(); handleBackspace(); return; }
+                    if (event.code === 'Space' || event.key === ' ') { editorSharpHeld = true; event.preventDefault(); return; }
+                    const match = event.code.match(/^(?:Digit|Numpad)([0-9])$/) || (/^[0-9]$/.test(event.key) ? [null, event.key] : null);
+                    if (match && !event.repeat) {
+                        const numberKeys = ['1','2','3','4','5','6','7','8','9','0'];
+                        const keyIndex = numberKeys.indexOf(match[1]);
+                        const zeroIndex = numberKeys.indexOf(String(keyboardSettings.keyboardZeroKey || '1'));
+                        if (keyIndex >= 0 && zeroIndex >= 0) {
+                            const step = keyIndex - zeroIndex;
+                            const letterIndex = ((step % 7) + 7) % 7;
+                            const octave = Math.floor(step / 7);
+                            const letter = ['C','D','E','F','G','A','B'][letterIndex];
+                            let note = octave === 0 ? letter : octave > 0 ? letter.toLowerCase() + "'".repeat(octave - 1) : letter + ','.repeat(-octave);
+                            if (editorSharpHeld) note = '^' + note;
+                            event.preventDefault();
+                            addNote(note);
+                            return;
+                        }
+                    }
+                }
+            }
             if (!isVoice && !isLyrics) return;
             if (event.key.toLowerCase() === 't' && !event.ctrlKey && !event.metaKey && !event.altKey) {
                 const lyrics = isVoice ? pairedInput(active, 'lyric', 'l1') : null;
@@ -766,6 +793,7 @@
             const step = event.shiftKey ? -1 : 1;
             voices[(current + step + voices.length) % voices.length].focus();
         }, true);
+        document.addEventListener('keyup', event => { if (event.code === 'Space' || event.key === ' ') editorSharpHeld = false; }, true);
 
         function handleBackspace() {
             if (!lastFocusedInput) return;
